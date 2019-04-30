@@ -17,6 +17,12 @@
    CW2_v2.30 - [Checkpoint] With bluetooth constant print of [Time(s),PoseX(mm),PoseY(mm),PoseTheta(deg)]
    CW2_v2.32 --->> SCRAP: I am blocking the obstacle code to pyqtgraph connection
    CW2_v2.33 - Working on including kalman filter
+   RomiRobot_MovementAndMapping - Iinital commit to Github
+   CW2_v2.34 --->> SCRAP: Crashing the serial monitor (Working on including kalman filter)
+   CW2_v2.35 - taking out unecessary libraries and classes
+   CW2_v2.36 - Working on including kalman filter (without crashing serial monitor)
+   CW2_v2.36 - Working on including kalman filter (serial monitor no longer crashing [due to ommission wire.begin])
+   RomiRobot_MovementAndMapping_v1.1 [Checkpoint] Github commit with working kalman filter
 
 */
 
@@ -37,6 +43,7 @@
 #include <Wire.h>
 //#include "imu.h"
 //#include "magnetometer.h"
+//#include <Romi32U4.h>
 
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -149,6 +156,7 @@ Mapper        Map; //Class for representing the map
 
 void setup()
 {
+ 
   //Setup PinModes
   pinMode(LED_BUILTIN, OUTPUT); //set LED default as output
   pinMode(buzzerPin, OUTPUT); //configure buzzerpin as output
@@ -174,21 +182,45 @@ void setup()
   Serial.begin( BAUD_RATE ); //used for wired connection to computer
   Serial1.begin(BAUD_RATE); //used for bluetooth
 
+  Wire.begin();
+
   //delay to give time to start serial monitor
   delay(1000);
-
-  //Print statement and play tone to indicate boot
-  Serial.println("Romi boot");
-  play_tone(60, 50);
-  delay(100);
-  play_tone(60, 50);
 
   // initialize the button objects
   btnA.begin();
   btnB.begin();
 
+  //Print statement and play tone to indicate boot
+  Serial.println("Romi boot, calibration started");
+  play_tone(60, 50);
+  delay(100);
+  play_tone(60, 50);
+
+  //Calibrate Gyro and magnetometer
+  myFilter.initDevices();
+//  myFilter.max_min_mag_data();
+  myFilter.calibrate_mag(); // Nawid - calibrates the magnetometer reading
+//  myFilter.calibrate_mag_auto();
+  play_tone(60, 50);
+  delay(3000);
+  myFilter.calibrate_gyro();  // Nawid - This is used to get the initial gyro readings
+  myFilter.initial_filtered_reading(); // Nawid - This is used to get the reading for the first measurement
+  myFilter.t = millis();
+  
+
+  //Print statement and play tone to indicate boot
+  Serial.println("Romi ready");
+  play_tone(60, 50);
+  delay(100);
+  play_tone(60, 50);
 
 }
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  Start of main loop                                                              *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 
 void loop()
 {
@@ -254,84 +286,85 @@ void loop()
       delay(250);
       break;
 
-    //---------------Can make changes from here  - RANDOM walk and Exploration behaviour ---------------------------------
+    //---------------Can make changes from here  - RANDOM walk and Exploration behaviour [Uncomment to use] ---------------------------------
 
-    case 4://-->> RANDOM WALK!
-
-      Serial.print("Romi doing random walk"); //for debugging
-
-      doRandomWalk(true); //doRandomWalk until obstacle is detected
-      DistanceSensor.obstacleDetected = false; //reset obstacle detected in the IR  library, note this is necessary to allow the ROMI to search for a new unexplored grid tile
-      stateCounter++; //keeps track of how many forward movements have been completed by the Romi
-      stateRobot = 5; //move to search function
-
-      Serial.print("stateRobot = "); //for debugging
-      Serial.println(stateRobot);
-
-      break;
-
-    case 5://-->> SEARCH FOR UNEXPLORED TILE
-
-      //Move to a new unexplored grid tile
-      bool myObstacleDetected = true; //this variable is used to denote when an obstacle is NOT detected!
-      
-      while (myObstacleDetected == true) {
-        Serial.print("Romi moving to unexplored tile"); //for debugging
-        Map.returnClosestUnexploredCoOrdinates(romiKinematics.getPoseX(), romiKinematics.getPoseY()); //return position of a random unexplored grid tile
-        myObstacleDetected = goToPoint(Map.targetXCoordinate, Map.targetYCoordinate); //move to that grid tile position
-        delay(250);
-        DistanceSensor.obstacleDetected = false; //reset obstacle detected in the IR mapping library, note this is necessary to allow the ROMI to search for a new unexplored grid tile
-        delay(250);
-      }
-      //Then turn towards the centre of the map (to maximise utility of random walk)
-      turnTowardsPoint((MAP_X / 2), (MAP_Y / 2));
-
-      stateCounter++; //keeps track of how many forward movements have been completed by the Romi
-
-      if (stateCounter < 3) { //if less than 3 forward movements completed
-        stateRobot = 4; //move to random walk function
-      }
-      else {
-        stateRobot = 99; //stop and wait for button press to print map
-        stateCounter = 0; //reset number of forward movements
-        play_tone(150, 500); //play a tone
-        Serial.println("Press button B to print map via serial port");
-      }
-      Serial.print("stateRobot = "); //for debugging
-      Serial.println(stateRobot);
-      break;
-
-
-      //--------------- This is an example of how you can make the Romi move straight or turn during an experiment ---------------------------------
-      //--------------- If you want to use these statements you can uncomment this code and comment the code statements above ----------------------
-
-//    case 4://-->> TRAVEL IN STRAIGHT LINE!
-//      delay(250);
-//      Serial.print("stateRobot test = ");
+//    case 4://-->> RANDOM WALK!
+//
+//      Serial.print("Romi doing random walk"); //for debugging
+//
+//      doRandomWalk(true); //doRandomWalk until obstacle is detected
+//      DistanceSensor.obstacleDetected = false; //reset obstacle detected in the IR  library, note this is necessary to allow the ROMI to search for a new unexplored grid tile
+//      stateCounter++; //keeps track of how many forward movements have been completed by the Romi
+//      stateRobot = 5; //move to search function
+//
+//      Serial.print("stateRobot = "); //for debugging
 //      Serial.println(stateRobot);
+//
+//      break;
+//
+//    case 5://-->> SEARCH FOR UNEXPLORED TILE
+//
+//      //Move to a new unexplored grid tile
+//      bool myObstacleDetected = true; //this variable is used to denote when an obstacle is NOT detected!
 //      
-//      moveStraightLine(-5000, 0); //move forwards for 5000 encoder counts, with obstacle detection turned off
-//      stateRobot++;
-//      Serial.print("stateRobot = ");
+//      while (myObstacleDetected == true) {
+//        Serial.print("Romi moving to unexplored tile"); //for debugging
+//        Map.returnClosestUnexploredCoOrdinates(romiKinematics.getPoseX(), romiKinematics.getPoseY()); //return position of a random unexplored grid tile
+//        myObstacleDetected = goToPoint(Map.targetXCoordinate, Map.targetYCoordinate); //move to that grid tile position
+//        delay(250);
+//        DistanceSensor.obstacleDetected = false; //reset obstacle detected in the IR mapping library, note this is necessary to allow the ROMI to search for a new unexplored grid tile
+//        delay(250);
+//      }
+//      //Then turn towards the centre of the map (to maximise utility of random walk)
+//      turnTowardsPoint((MAP_X / 2), (MAP_Y / 2));
+//
+//      stateCounter++; //keeps track of how many forward movements have been completed by the Romi
+//
+//      if (stateCounter < 3) { //if less than 3 forward movements completed
+//        stateRobot = 4; //move to random walk function
+//      }
+//      else {
+//        stateRobot = 99; //stop and wait for button press to print map
+//        stateCounter = 0; //reset number of forward movements
+//        play_tone(150, 500); //play a tone
+//        Serial.println("Press button B to print map via serial port");
+//      }
+//      Serial.print("stateRobot = "); //for debugging
 //      Serial.println(stateRobot);
 //      break;
-//
-//    case 5://-->> TURN ON THE SPOT!
-//      delay(250);
-//      moveTurnOnSpot(90, 0); //turn on spot 90 degrees clockwise, with line detection turned off
-//      stateRobot++;
-//      Serial.print("stateRobot = ");
-//      Serial.println(stateRobot);
-//      break;
-//
-//    case 6://-->> RANDOM WALK!
-//      delay(250);
-//      doRandomWalk(false); //doRandomWalk forever (because obstacle detection is off)    
-//      break;
-//
-//    default:
-//      //pass
-//      break;
+
+
+      //--------------- This is an example of how you can make the Romi move straight, turn or random walk during an experiment ---------------------------------
+      //--------------- If you want to use these statements you can edit them as you choose ----------------------
+      //--------------- Note to make Romi go forwards use a negative encoder count!
+
+    case 4://-->> TRAVEL IN STRAIGHT LINE!
+      delay(250);
+      Serial.print("stateRobot test = ");
+      Serial.println(stateRobot);
+      
+      moveStraightLine(-5000, 0); //move forwards for 5000 encoder counts, with obstacle detection turned off
+      stateRobot++;
+      Serial.print("stateRobot = ");
+      Serial.println(stateRobot);
+      break;
+
+    case 5://-->> TURN ON THE SPOT!
+      delay(250);
+      moveTurnOnSpot(90, 0); //turn on spot 90 degrees clockwise, with line detection turned off
+      stateRobot++;
+      Serial.print("stateRobot = ");
+      Serial.println(stateRobot);
+      break;
+
+    case 6://-->> RANDOM WALK!
+      delay(250);
+      doRandomWalk(false); //doRandomWalk forever (because obstacle detection is off)    
+      break;
+
+    default:
+      //pass
+      break;
 
      
   } // end of switch case statement
@@ -341,7 +374,7 @@ void loop()
 } // end of main loop
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-  Functions                                          *
+  Functions                                                                     *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //-----------------Functions for MOVEMENT!--------------------------
 
@@ -950,38 +983,38 @@ void doMapping() {
 //-----------------Functions for Utlities !!!--------------------------
 
 //-----DEBUG FUNCTION---------------
-void printDebugStatements(float outputRightMotor, float outputLeftMotor, float outputAnglePoseStraight) {
-
-  /*
-    //Code for debugging of PID OUTPUT for right motor
-    Serial.print("Right wheel PID output is: ");
-    Serial.println(outputRightMotor);
-  */
-
-
-  //Code for debugging of PID OUTPUT for left motor
-  Serial.print("Left wheel PID output is: ");
-  Serial.println(outputLeftMotor);
-
-
-  /*
-    //Code for debugging of PID OUTPUT for angle PID (where left wheel is a slave to right master)
-    Serial.print("Left wheel slave angle PID output is: ");
-    Serial.println(outputAnglePoseStraight);
-  */
-
-  //Code to check encoders values
-  // e0-> right, e1-> left
-  Serial.print("encoder values   R:");
-  Serial.print( count_e0 );
-  Serial.print( ", L:");
-  Serial.println( count_e1 );
-
-  // short delay so that our plotter graph keeps
-  // some history for debugging
-  delay(LOOP_DELAY);
-
-}
+//void printDebugStatements(float outputRightMotor, float outputLeftMotor, float outputAnglePoseStraight) {
+//
+//  /*
+//    //Code for debugging of PID OUTPUT for right motor
+//    Serial.print("Right wheel PID output is: ");
+//    Serial.println(outputRightMotor);
+//  */
+//
+//
+//  //Code for debugging of PID OUTPUT for left motor
+//  Serial.print("Left wheel PID output is: ");
+//  Serial.println(outputLeftMotor);
+//
+//
+//  /*
+//    //Code for debugging of PID OUTPUT for angle PID (where left wheel is a slave to right master)
+//    Serial.print("Left wheel slave angle PID output is: ");
+//    Serial.println(outputAnglePoseStraight);
+//  */
+//
+//  //Code to check encoders values
+//  // e0-> right, e1-> left
+//  Serial.print("encoder values   R:");
+//  Serial.print( count_e0 );
+//  Serial.print( ", L:");
+//  Serial.println( count_e1 );
+//
+//  // short delay so that our plotter graph keeps
+//  // some history for debugging
+//  delay(LOOP_DELAY);
+//
+//}
 //---------------------------------
 
 
@@ -1066,4 +1099,4 @@ bool checkIfRomiIsOutsideMap() {
   //return value
   return romiOutsideOfMap;
 }
-//---------------------------------
+//----------------------------------

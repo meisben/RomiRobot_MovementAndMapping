@@ -217,19 +217,19 @@ float PID::update(float demand, float measurement)
   }
 
   //Print debugging information if required
-  if (debug)
-  {
-    Serial.print("Error: ");
-    Serial.print(error);
-    Serial.print(" Error Delta");
-    Serial.println(error_delta);
-    Serial.println("----Threshold values----");
-    Serial.print("thresholdReached bool: ");
-    Serial.println(thresholdReached);
-    Serial.print("Here is the InstAverageAbsError: ");
-    Serial.println(totalAbsError/countStorageSize);
-    print_components();
-  }
+//  if (debug)
+//  {
+//    Serial.print("Error: ");
+//    Serial.print(error);
+//    Serial.print(" Error Delta");
+//    Serial.println(error_delta);
+//    Serial.println("----Threshold values----");
+//    Serial.print("thresholdReached bool: ");
+//    Serial.println(thresholdReached);
+//    Serial.print("Here is the InstAverageAbsError: ");
+//    Serial.println(totalAbsError/countStorageSize);
+//    print_components();
+//  }
   
   return total;
 }

@@ -1,4 +1,4 @@
-# RomiRobot_MovementAndMapping
+﻿# RomiRobot_MovementAndMapping
 
 
 ## Contents
@@ -11,7 +11,12 @@
 
 ## Introduction
 
-This arduino script is provides movement and mapping functionality for the 'Romi' robot to be used in robotic systems coursework.
+This arduino script is provides movement and mapping functionality for the 'Romi' robot to be used in robotic systems coursework
+
+Robot orientation is estimated using a kalman filter from the:
+-   Kinematics
+-   Gyroscope
+-   Magnetometer
 
 The main functionality is as explained below by the text and image:
 
@@ -44,9 +49,7 @@ The main functionality is as explained below by the text and image:
 
 ## Guidance on use
 
-**Note**: that the kalman filter has not yet been included and implemented
 
-- To use the Mapping behaviour run the code as provided
 - To use the general movement behaviour
-    - 'comment out' case 4-5 of the switch case statement (lines 258 → 304)
-    - 'uncomment' case 4-6 of the switch case statement (lines 308 → 334) and alter as necessary using the example format provided
+    - follow examples in case 4-6 of the switch case statement (lines 308 → 334) and alter as necessary using the example format provided
+- To use the Mapping behaviour uncommment switch case statement (lines 258 → 304) and comment out general movement section of code
