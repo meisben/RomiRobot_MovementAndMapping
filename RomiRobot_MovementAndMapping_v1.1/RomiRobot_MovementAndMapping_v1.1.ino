@@ -22,7 +22,7 @@
    CW2_v2.35 - taking out unecessary libraries and classes
    CW2_v2.36 - Working on including kalman filter (without crashing serial monitor)
    CW2_v2.36 - Working on including kalman filter (serial monitor no longer crashing [due to ommission wire.begin])
-   RomiRobot_MovementAndMapping_v1.1 [Checkpoint] Github commit with working kalman filter
+   RomiRobot_MovementAndMapping_v1.1a [Checkpoint] Github commit with working kalman filter, updated to remove eroneous serial prints
 
 */
 

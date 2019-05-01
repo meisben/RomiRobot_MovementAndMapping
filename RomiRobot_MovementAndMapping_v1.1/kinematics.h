@@ -150,11 +150,6 @@ float Kinematics::updateStraightMotion(float r_encoderCount, float l_encoderCoun
 
   float kalmanPoseTheta = kalmanPredictionUpdateOrientation(poseThetaPrediction, KF.processModel, KF.measurementComplimentaryFilter); //call kalman filter
 
-//  Serial.print("poseTheta: "); //print for debugging
-//  Serial.print(poseTheta);
-//  Serial.print("    kalmanPoseTheta: ");
-//  Serial.println(kalmanPoseTheta);
-
   if(kalmanFilterTurnOn == true) //if this is turned on the Kalman filter will be the reference for 'poseTheta'
   {
     poseTheta = kalmanPoseTheta;
@@ -199,11 +194,6 @@ float Kinematics::updateTurnOnSport(float r_encoderCount, float l_encoderCount)
 
   float kalmanPoseTheta = kalmanPredictionUpdateOrientation(poseThetaPrediction, KF.processModel, KF.measurementComplimentaryFilter); //call kalman filter
 
-  Serial.print("poseTheta: "); //print for debugging
-  Serial.print(poseTheta);
-  Serial.print("    kalmanPoseTheta: ");
-  Serial.println(kalmanPoseTheta);
-
   if(kalmanFilterTurnOn == true) //if this is turned on the Kalman filter will be the reference for 'poseTheta'
   {
     poseTheta = kalmanPoseTheta;
@@ -232,10 +222,6 @@ float Kinematics::kalmanPredictionUpdateOrientation(float myPoseThetaPrediction,
   //take complimentary filter measurement
   myMeasurement.mean = 360-myFilter.complementary_filter_calc(); //mapped into the 0-360 deg space with convention positive angle ccw
 
-  Serial.println(myMeasurement.mean);
-
-  //use complimentary filter in the place of 'measurementGyroscope'
-  
   //kalman filter using one measurement from the complimentary filter
   KF.kalman_predict(KF.xPosterior, myProcessModel, KF.xPrior); //i.e. return mean, variance to xPrior from combination of xPosterior and process model gaussians
   KF.kalman_update(KF.xPrior, myMeasurement, KF.xPosterior); //i.e. return mean, variance to xPosterior from combination of xPrior and measurement gaussians
