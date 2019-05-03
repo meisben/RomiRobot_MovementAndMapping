@@ -44,25 +44,23 @@ class Kinematics
     
     void setPoseTheta(float); //Set the poseTheta of the robot
     void resetEncoderCount(); //Reset all encoder counts to zero. Used to periodically prevent overflow
+    void kalmanFilterCalculate(); //calculate kalman filter
     
-    float getPoseX(); //Return the pose of the robot
-    float getPoseY(); //Return the pose of the robot
-    float getPoseTheta(); //Return the pose of the robot
     float getPoseThetaRadians(); //Return the pose of the robot in radians
     float updateStraightMotion(float r_encoderCount, float l_encoderCount); ////This function updates the estimated pose of the robot. It should be called in a loop
     float updateTurnOnSport(float r_encoderCount, float l_encoderCount); ////This function updates the estimated pose of the robot. It should be called in a loop
+    //Representing the position of the robot - note we start in the centre of the map!
+    float poseX = 0; //MAP_X/2; //position in X global frame (mm)
+    float poseY = 0; //MAP_Y/2; //position in Y global frame (mm)
+    float poseTheta = 0; //orientation in global frame (deg)
+    float gloablPoseThetaPrediction = 0; // this line keeps track over the variable over the timestep until it is printed over bluetooth!
 
     bool kalmanFilterTurnOn = true;
 
   private:
     //Private variables and methods go here
-    float kalmanPredictionUpdateOrientation(float romiPoseThetaPrediction, Gaussian & myProcessModel, Gaussian & myMeasurement); //Kalman filter to update orientation
-
-    //Representing the position of the robot - note we start in the centre of the map!
-    float poseX = MAP_X/2; //position in X global frame (mm)
-    float poseY = MAP_Y/2; //position in Y global frame (mm)
-    float poseTheta = 0; //orientation in global frame (deg)
-    float lastPoseTheta = 0; //last orientation estimate (used to calculate process model for kalman filter)c
+    float kalmanPredictionUpdateOrientation(float romiPoseThetaPrediction, Gaussian & myProcessModel, Gaussian & myMeasurement); //Kalman filter to update orientation  
+    float lastPoseTheta = 0; //last orientation estimate (used to calculate process model for kalman filter)
     long lastCount_eR; //stores the last value of right encoder count
     long lastCount_eL; //stores the last value of left encoder count
 };
@@ -88,24 +86,10 @@ void Kinematics::setPoseTheta(float myPoseTheta)
     poseTheta += 360;
   }
   
-  Serial.print("poseTheta = ");
-  Serial.println(poseTheta);
+//  Serial.print("poseTheta = ");
+//  Serial.println(poseTheta);
 }
 
-float Kinematics::getPoseX()
-{
-  return poseX;
-}
-
-float Kinematics::getPoseY()
-{
-  return poseY;
-}
-
-float Kinematics::getPoseTheta()
-{
-  return poseTheta;
-}
 
 float Kinematics::getPoseThetaRadians()
 {
@@ -146,18 +130,7 @@ float Kinematics::updateStraightMotion(float r_encoderCount, float l_encoderCoun
 
   //-----This code here implements the kalman filter!---------------------------------------||||||||||||||||||||||||||||||||||||||||||||||
   
-  float poseThetaPrediction = poseTheta - lastPoseTheta; // calculate dx
-
-  float kalmanPoseTheta = kalmanPredictionUpdateOrientation(poseThetaPrediction, KF.processModel, KF.measurementComplimentaryFilter); //call kalman filter
-
-  if(kalmanFilterTurnOn == true) //if this is turned on the Kalman filter will be the reference for 'poseTheta'
-  {
-    poseTheta = kalmanPoseTheta;
-  }
-
-  lastPoseTheta = poseTheta; //used for kalman filter process model 
-
-  //-----End of Kalman filter relevant code ---------------------------------------||||||||||||||||||||||||||||||||||||||||||||||
+  kalmanFilterCalculate();
 
 }
 
@@ -190,18 +163,7 @@ float Kinematics::updateTurnOnSport(float r_encoderCount, float l_encoderCount)
 
   //-----This code here implements the kalman filter!---------------------------------------||||||||||||||||||||||||||||||||||||||||||||||
   
-  float poseThetaPrediction = poseTheta - lastPoseTheta; // calculate dx
-
-  float kalmanPoseTheta = kalmanPredictionUpdateOrientation(poseThetaPrediction, KF.processModel, KF.measurementComplimentaryFilter); //call kalman filter
-
-  if(kalmanFilterTurnOn == true) //if this is turned on the Kalman filter will be the reference for 'poseTheta'
-  {
-    poseTheta = kalmanPoseTheta;
-  }
-
-  lastPoseTheta = poseTheta; //used for kalman filter process model 
-
-  //-----End of Kalman filter relevant code ---------------------------------------||||||||||||||||||||||||||||||||||||||||||||||
+  kalmanFilterCalculate();
 }
 
 void Kinematics::resetEncoderCount()
@@ -212,8 +174,7 @@ void Kinematics::resetEncoderCount()
   lastCount_eL = 0;  
 }
 
-//I think the problem here is the whole process model thing x + dx ? .. this is not what we're using, needs to be ammended !?
-
+//Update Kalman filter
 float Kinematics::kalmanPredictionUpdateOrientation(float myPoseThetaPrediction, Gaussian & myProcessModel, Gaussian & myMeasurement)
 {
   //use kinematics as the 'KF.ProcessModel'
@@ -229,5 +190,21 @@ float Kinematics::kalmanPredictionUpdateOrientation(float myPoseThetaPrediction,
   return KF.xPosterior.mean;
 }
 
+//Calculate inputs to kalman filter and call it
+void Kinematics::kalmanFilterCalculate()
+{
+  float poseThetaPrediction = poseTheta - lastPoseTheta; // calculate dx
 
+  float kalmanPoseTheta = kalmanPredictionUpdateOrientation(poseThetaPrediction, KF.processModel, KF.measurementComplimentaryFilter); //call kalman filter
+
+  if(kalmanFilterTurnOn == true) //if this is turned on the Kalman filter will be the reference for 'poseTheta'
+  {
+    poseTheta = kalmanPoseTheta;
+  }
+
+  lastPoseTheta = poseTheta; //used for kalman filter process model  
+
+  gloablPoseThetaPrediction+= poseThetaPrediction; // this line keeps track over the variable over the timestep until it is printed over bluetooth!
+}
+ 
 #endif

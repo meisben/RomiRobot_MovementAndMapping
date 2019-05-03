@@ -21,9 +21,13 @@
    CW2_v2.34 --->> SCRAP: Crashing the serial monitor (Working on including kalman filter)
    CW2_v2.35 - taking out unecessary libraries and classes
    CW2_v2.36 - Working on including kalman filter (without crashing serial monitor)
-   CW2_v2.36 - Working on including kalman filter (serial monitor no longer crashing [due to ommission wire.begin])
+   CW2_v2.37 - Working on including kalman filter (serial monitor no longer crashing [due to ommission wire.begin])
    RomiRobot_MovementAndMapping_v1.1a [Checkpoint] Github commit with working kalman filter, updated to remove eroneous serial prints
-
+   CW2_v2.38 - Working on reducing code size so that movement & mapping functionality can take place successfully
+   CW2_v2.39 - Code fits at 99% of program storage space, working on reducing it a little bit further :S (but it's still at 99%)
+   CW2_v2.40 - Changing the bluetooth code into a function to minimise space use
+   CW2_v2.41 - Adding in printed values for the complimentary filter and delta kinematics, changed start mode to experiment, placed Romi at start point 0,0
+   RomiRobot_MovementAndMapping_v1.2 [Checkpoint] Github commit with bluetooth writing complimentary filter and extended values to python dashboard
 */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -37,10 +41,9 @@
 #include "button.h" // note that this is only used for the button press so that i don't have to deal with debouncing etc,      // https://github.com/JChristensen/JC_Button 
 //------Added from baseline
 #include "pins.h"
-#include "utils.h"
 #include "irproximity.h"
-#include "mapping.h"
 #include <Wire.h>
+//#include "utils.h"
 //#include "imu.h"
 //#include "magnetometer.h"
 //#include <Romi32U4.h>
@@ -81,18 +84,12 @@ const char buttonPinB = 30;
 unsigned long general_timer;
 unsigned long time_of_read_lineStraightOrTurning;
 unsigned long time_of_read_lineStraightOrTurningPID;
-unsigned long time_of_read_lineStraightOrTurningMotors;
+//unsigned long time_of_read_lineStraightOrTurningMotors;
 unsigned long start_time; // this is used to print a timestamp for bluetooth data
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
    Global Variables.                                                                               *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-//----Variable for PID inputs
-//[DELETE] float target = 2000; //Target encoder count
-
-//----Variable for disabling distance sensor (e.g. for experiments that don't need one!)
-//[DELETE] bool distanceSensorDisabled = false;
 
 //-----Variables for keeping track of 'Romi State' and whether a movement sequence is complete
 
@@ -145,8 +142,7 @@ Button btnB(buttonPinB);
 
 //------Classes from CW2 baseline
 SharpIR       DistanceSensor(SHARP_IR_PIN); //Distance sensor
-//Imu           Imu; //Class for the gyroscope (IMU)
-//Magnetometer  Mag; // Class for the magnetometer
+
 Mapper        Map; //Class for representing the map
 
 
@@ -244,11 +240,11 @@ void loop()
     Map.printMap();
     Serial.println("");
     Serial.print("Kinematics X =");
-    Serial.println(romiKinematics.getPoseX());
+    Serial.println(romiKinematics.poseX);
     Serial.print("Kinematics Y =");
-    Serial.println(romiKinematics.getPoseY());
+    Serial.println(romiKinematics.poseY);
     Serial.print("Kinematics Theta =");
-    Serial.println(romiKinematics.getPoseTheta());
+    Serial.println(romiKinematics.poseTheta);
     Serial.println("");
     Serial.println("waiting for button A press");
     romiKinematics.resetEncoderCount();
@@ -297,19 +293,19 @@ void loop()
 //      stateCounter++; //keeps track of how many forward movements have been completed by the Romi
 //      stateRobot = 5; //move to search function
 //
-//      Serial.print("stateRobot = "); //for debugging
-//      Serial.println(stateRobot);
+////      Serial.print("stateRobot = "); //for debugging
+////      Serial.println(stateRobot);
 //
 //      break;
 //
 //    case 5://-->> SEARCH FOR UNEXPLORED TILE
-//
+//      {
 //      //Move to a new unexplored grid tile
 //      bool myObstacleDetected = true; //this variable is used to denote when an obstacle is NOT detected!
 //      
 //      while (myObstacleDetected == true) {
 //        Serial.print("Romi moving to unexplored tile"); //for debugging
-//        Map.returnClosestUnexploredCoOrdinates(romiKinematics.getPoseX(), romiKinematics.getPoseY()); //return position of a random unexplored grid tile
+//        Map.returnClosestUnexploredCoOrdinates(romiKinematics.poseX, romiKinematics.poseY); //return position of a random unexplored grid tile
 //        myObstacleDetected = goToPoint(Map.targetXCoordinate, Map.targetYCoordinate); //move to that grid tile position
 //        delay(250);
 //        DistanceSensor.obstacleDetected = false; //reset obstacle detected in the IR mapping library, note this is necessary to allow the ROMI to search for a new unexplored grid tile
@@ -329,9 +325,10 @@ void loop()
 //        play_tone(150, 500); //play a tone
 //        Serial.println("Press button B to print map via serial port");
 //      }
-//      Serial.print("stateRobot = "); //for debugging
-//      Serial.println(stateRobot);
+////      Serial.print("stateRobot = "); //for debugging
+////      Serial.println(stateRobot);
 //      break;
+//      }
 
 
       //--------------- This is an example of how you can make the Romi move straight, turn or random walk during an experiment ---------------------------------
@@ -456,22 +453,12 @@ bool moveStraightLine(long distance, bool findObstacle)
     delay(LOOP_DELAY); //the code doesn't work without this, not sure why? ... question to instructors !
 
     //debug statements
-    //    Serial.print("encoder values   R:");
-    //    Serial.print( count_e0 );
-    //    Serial.print(", L:");
-    //    Serial.print( count_e1 );
-    //    Serial.print("  R_EncoderTarget = ");
-    //    Serial.print(R_EncoderCurrentTarget);
-    //    Serial.print("  L_EncoderTarget = ");
-    //    Serial.println(L_EncoderCurrentTarget);
-    //    Serial.print("checkIfRomiIsOutsideMap() = ");
-    //    Serial.print(checkIfRomiIsOutsideMap());
 //    Serial.print("  Kinematics X = "); //note i should move this all into the debug function !
-//    Serial.print(romiKinematics.getPoseX());
+//    Serial.print(romiKinematics.poseX);
 //    Serial.print("  Kinematics Y = ");
-//    Serial.print(romiKinematics.getPoseY());
+//    Serial.print(romiKinematics.poseY);
 //    Serial.print("  Kinematics Theta = ");
-//    Serial.println(romiKinematics.getPoseTheta());
+//    Serial.println(romiKinematics.poseTheta);
 
     unsigned long elapsed_time_general_timer = millis() - general_timer;
 
@@ -480,13 +467,7 @@ bool moveStraightLine(long distance, bool findObstacle)
         // update timestamp
         general_timer = millis();
 
-        Serial1.print((millis()-start_time)/1000);
-        Serial1.print(",");
-        Serial1.print(romiKinematics.getPoseX());
-        Serial1.print(",");
-        Serial1.print(romiKinematics.getPoseY());
-        Serial1.print(",");
-        Serial1.println(romiKinematics.getPoseTheta());
+        printToBluetoothDashboard();
       }
 
   }
@@ -530,14 +511,14 @@ bool moveTurnOnSpot(float angle, bool findLine) { // Function to turn on the spo
     //Do some stuff to find the time now
 
     // Get how much time has passed right now.
-    unsigned long time_now = millis();
+    //unsigned long time_now = millis();
 
     // Work out how many milliseconds have gone passed by subtracting
     // our two timestamps.  time_now will always be bigger than the
     // time_of_read (except when millis() overflows after 50 days).
-    unsigned long elapsed_time_lineStraightOrTurning = time_now - time_of_read_lineStraightOrTurning;
-    unsigned long elapsed_time_lineStraightOrTurningPID = time_now - time_of_read_lineStraightOrTurningPID;
-    unsigned long elapsed_time_lineStraightOrTurningMotors = time_now - time_of_read_lineStraightOrTurningMotors;
+    unsigned long elapsed_time_lineStraightOrTurning = millis() - time_of_read_lineStraightOrTurning;
+    unsigned long elapsed_time_lineStraightOrTurningPID = millis() - time_of_read_lineStraightOrTurningPID;
+    unsigned long elapsed_time_general_timer = millis() - general_timer;
 
     //first do some stuff if you're trying to find a line
 
@@ -594,10 +575,10 @@ bool moveTurnOnSpot(float angle, bool findLine) { // Function to turn on the spo
 
     // ~~send demand to motors and check for completion~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    if ( elapsed_time_lineStraightOrTurningMotors > 50 )
+    if ( elapsed_time_general_timer > 50 )
     {
 
-      time_of_read_lineStraightOrTurningMotors = millis();
+      general_timer = millis();
 
       if (R_thresholdReached == 1) {          //if Right motor has reached goal
         rightMotor.setSpeed(0);               //Set right motor speed to zero
@@ -622,23 +603,12 @@ bool moveTurnOnSpot(float angle, bool findLine) { // Function to turn on the spo
 
 
       //debugging comments
-      //      Serial.print("encoder values   R:");
-      //      Serial.print( count_e0 );
-      //      Serial.print(", L:");
-      //      Serial.print( count_e1 );
-      //      Serial.print("  R_EncoderTarget = ");
-      //      Serial.print(R_EncoderCurrentTarget);
-      //      Serial.print("  L_EncoderTarget = ");
-      //      Serial.println(L_EncoderCurrentTarget);
-
 //      Serial.print("Kinematics X =");
-//      Serial.println(romiKinematics.getPoseX());
+//      Serial.println(romiKinematics.poseX);
 //      Serial.print("Kinematics Y =");
-//      Serial.println(romiKinematics.getPoseY());
+//      Serial.println(romiKinematics.poseY);
 //      Serial.print("Kinematics Theta =");
-//      Serial.println(romiKinematics.getPoseTheta());
-      //      Serial.print(romiLineSensorFusion.isLinePresent()*10);
-      //      Serial.print(",");
+//      Serial.println(romiKinematics.poseTheta);
       //      Serial.println(romiLineSensorFusion.lineConfidenceValue);
 
     unsigned long elapsed_time_general_timer = millis() - general_timer;
@@ -648,13 +618,7 @@ bool moveTurnOnSpot(float angle, bool findLine) { // Function to turn on the spo
         // update timestamp
         general_timer = millis();
 
-        Serial1.print((millis()-start_time)/1000);
-        Serial1.print(",");
-        Serial1.print(romiKinematics.getPoseX());
-        Serial1.print(",");
-        Serial1.print(romiKinematics.getPoseY());
-        Serial1.print(",");
-        Serial1.println(romiKinematics.getPoseTheta());
+        printToBluetoothDashboard();
       }
 
 
@@ -681,7 +645,7 @@ bool goToPoint(float x, float y)
   //Calculate required angle
   //float headingRequired = atan2(deltaY, deltaX)*180/PI;
   float headingRequired = getAngleToPoint(x, y);
-  float turnAngleRequired = headingRequired - romiKinematics.getPoseTheta() + 180;
+  float turnAngleRequired = headingRequired - romiKinematics.poseTheta + 180;
 
   //boolean for obstacle detection
   bool myObstacleDetected = false;
@@ -696,14 +660,14 @@ bool goToPoint(float x, float y)
     turnAngleRequired += 360;
   }
 
-  Serial.println("");
-  Serial.println("----------TURNING ANGLE = ---------");
-  Serial.println(turnAngleRequired);
-  Serial.println("----------DISTANCE = ---------");
-  Serial.println(distanceRequired);
-  Serial.println((- round(distanceRequired / 0.153)));
-  Serial.println("-----------------------------");
-  Serial.println("");
+//  Serial.println("");
+//  Serial.println("----------TURNING ANGLE = ---------");
+//  Serial.println(turnAngleRequired);
+//  Serial.println("----------DISTANCE = ---------");
+//  Serial.println(distanceRequired);
+//  Serial.println((- round(distanceRequired / 0.153)));
+//  Serial.println("-----------------------------");
+//  Serial.println("");
 
   //go home
   moveTurnOnSpot(turnAngleRequired, 0);
@@ -725,7 +689,7 @@ void turnTowardsPoint(float x, float y)
   //Calculate required angle
   //float headingRequired = atan2(deltaY, deltaX)*180/PI;
   float headingRequired = getAngleToPoint(x, y);
-  float turnAngleRequired = headingRequired - romiKinematics.getPoseTheta() + 180;
+  float turnAngleRequired = headingRequired - romiKinematics.poseTheta + 180;
 
   //Convert required turn angle to minimum clockwise or anticlockwise rotation
   if (turnAngleRequired > 180)
@@ -747,8 +711,8 @@ void turnTowardsPoint(float x, float y)
 
 float getDistanceToPoint(float pointX, float pointY)
 {
-  float deltaX = pointX - romiKinematics.getPoseX();
-  float deltaY = pointY - romiKinematics.getPoseY();
+  float deltaX = pointX - romiKinematics.poseX;
+  float deltaY = pointY - romiKinematics.poseY;
 
   //Calculate distance
   float distanceRequired = sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -760,8 +724,8 @@ float getDistanceToPoint(float pointX, float pointY)
 //-----GET ANGLE TO POINT FUNCTION--------------------
 float getAngleToPoint(float pointX, float pointY)
 {
-  float deltaX = pointX - romiKinematics.getPoseX();
-  float deltaY = pointY - romiKinematics.getPoseY();
+  float deltaX = pointX - romiKinematics.poseX;
+  float deltaY = pointY - romiKinematics.poseY;
 
   //Calculate required angle
   float headingRequired = atan2(deltaY, deltaX) * 180 / PI;
@@ -825,7 +789,11 @@ void doRandomWalk(bool findObstacle) {
       walk_update = millis();
 
       // randGaussian(mean, sd).  utils.h
-      turn_bias = randGaussian(0, 10);
+      //turn_bias = randGaussian(0, 10);
+      
+      //new code to shrink
+      Gaussian myGaussian(0, 10);
+      turn_bias = int(myGaussian.random());
 
       // Setting a speed demand with these variables is automatically captured by a speed PID controller in timer3 ISR. Check interrupts.h  for more information.
       left_speed_demand = forward_bias + turn_bias;
@@ -837,14 +805,12 @@ void doRandomWalk(bool findObstacle) {
     leftMotor.setSpeed(right_speed_demand); //else keep both motors moving towards goals
 
     //Debugging statements
-    //    Serial.print("checkIfRomiIsOutsideMap() = ");
-    //    Serial.print(checkIfRomiIsOutsideMap());
 //    Serial.print("  Kinematics X = "); //note i should move this all into the debug function !
-//    Serial.print(romiKinematics.getPoseX());
+//    Serial.print(romiKinematics.poseX);
 //    Serial.print("  Kinematics Y = ");
-//    Serial.print(romiKinematics.getPoseY());
+//    Serial.print(romiKinematics.poseY);
 //    Serial.print("  Kinematics Theta = ");
-//    Serial.println(romiKinematics.getPoseTheta());
+//    Serial.println(romiKinematics.poseTheta);
 
 
 
@@ -855,74 +821,13 @@ void doRandomWalk(bool findObstacle) {
         // update timestamp
         general_timer = millis();
 
-        Serial1.print((millis()-start_time)/1000);
-        Serial1.print(",");
-        Serial1.print(romiKinematics.getPoseX());
-        Serial1.print(",");
-        Serial1.print(romiKinematics.getPoseY());
-        Serial1.print(",");
-        Serial1.println(romiKinematics.getPoseTheta());
+        printToBluetoothDashboard();
       }
 
 
   }
 }
 
-//------------------------------------------
-
-//-----CHECK LINE POSITION FUNCTION--------------
-void checkLinePosition()
-{
-  //romiLineSensorFusion.returnLinePosition(lineLeft.read_calibrated(), lineCentre.read_calibrated(), lineRight.read_calibrated());
-
-}
-//------------------------------------------
-
-//-----CHECK FOR END OF LINE--------------
-bool checkForEndOfLine(bool myLastDirection)
-{
-
-  int signedDirection;
-  bool isTheLinePresent = false;
-
-  delay(500);
-
-  if (myLastDirection == 1) //right
-  {
-    signedDirection = 1;
-  }
-  else if (myLastDirection == 0) //left
-  {
-    signedDirection = -1;
-  }
-
-  int i = 0;
-
-  isTheLinePresent = moveTurnOnSpot(signedDirection * 90, 1); //turn and search for a line
-
-  if (isTheLinePresent == false)
-  {
-    delay(500);
-    rightMotor.setSpeed(0);
-    leftMotor.setSpeed(0);
-    signedDirection = signedDirection * -1;
-    isTheLinePresent = moveTurnOnSpot(signedDirection * 180, 1); //turn and search for a line
-  }
-
-  if (isTheLinePresent == true)
-  {
-    //Serial.print("found line in search!");
-  }
-
-  else
-  {
-    play_tone(150, 1000);
-    //Serial.print("didn't find line in search!");
-  }
-
-
-  return !isTheLinePresent;
-}
 //------------------------------------------
 
 //-----------------Functions for Positioning !!!--------------------------
@@ -939,25 +844,16 @@ void doMapping() {
   if ( millis() - irSensor_update > 100 ) {
     irSensor_update = millis();
 
-    float distance = DistanceSensor.getDistanceInMM();
     float filteredDistance = DistanceSensor.getFilteredDistanceInMM();
-
-
-    //Some debugging print statements for calibrating IR sensor
-    //    Serial.print("distance = ");
-    //    Serial.print(distance);
-    //    Serial.print("  |  filteredDistance = ");
-    //    Serial.println(filteredDistance);
-
 
     if ( filteredDistance < 450 && filteredDistance > 30 ) { //i.e. between approx 30mm and 400mm distance away
 
       // add distance to  centre of the robot.
-      distance += 95;
+      filteredDistance += 95;
 
       // Here we calculate the actual position of the obstacle we have detected
-      float projected_x = romiKinematics.getPoseX() + ( distance * cos( romiKinematics.getPoseThetaRadians() ) );
-      float projected_y = romiKinematics.getPoseY() + ( distance * sin( romiKinematics.getPoseThetaRadians() ) );
+      int projected_x = romiKinematics.poseX + ( filteredDistance * cos( romiKinematics.getPoseThetaRadians() ) );
+      int projected_y = romiKinematics.poseY + ( filteredDistance * sin( romiKinematics.getPoseThetaRadians() ) );
       Map.updateMapFeature( (byte)'O', projected_x, projected_y );
 
     }
@@ -965,7 +861,7 @@ void doMapping() {
 
 
     if ( lineCentre.read_filtered() > 50 ) {
-      Map.updateMapFeature( (byte)'L', romiKinematics.getPoseY(), romiKinematics.getPoseX() );
+      Map.updateMapFeature( (byte)'L', romiKinematics.poseY, romiKinematics.poseX );
     }
   }
 
@@ -974,49 +870,13 @@ void doMapping() {
 
     bool tileExplored = doCheckForUnexploredTile();
     if (tileExplored == false) {
-      Map.updateMapFeature( (byte)'.', romiKinematics.getPoseY(), romiKinematics.getPoseX() );
+      Map.updateMapFeature( (byte)'.', romiKinematics.poseY, romiKinematics.poseX );
     }
   }
 }
 //---------------------------------
 
 //-----------------Functions for Utlities !!!--------------------------
-
-//-----DEBUG FUNCTION---------------
-//void printDebugStatements(float outputRightMotor, float outputLeftMotor, float outputAnglePoseStraight) {
-//
-//  /*
-//    //Code for debugging of PID OUTPUT for right motor
-//    Serial.print("Right wheel PID output is: ");
-//    Serial.println(outputRightMotor);
-//  */
-//
-//
-//  //Code for debugging of PID OUTPUT for left motor
-//  Serial.print("Left wheel PID output is: ");
-//  Serial.println(outputLeftMotor);
-//
-//
-//  /*
-//    //Code for debugging of PID OUTPUT for angle PID (where left wheel is a slave to right master)
-//    Serial.print("Left wheel slave angle PID output is: ");
-//    Serial.println(outputAnglePoseStraight);
-//  */
-//
-//  //Code to check encoders values
-//  // e0-> right, e1-> left
-//  Serial.print("encoder values   R:");
-//  Serial.print( count_e0 );
-//  Serial.print( ", L:");
-//  Serial.println( count_e1 );
-//
-//  // short delay so that our plotter graph keeps
-//  // some history for debugging
-//  delay(LOOP_DELAY);
-//
-//}
-//---------------------------------
-
 
 //-----TONE FUNCTION---------------
 void play_tone(int frequency, int duration) //plays a tone with specified duration - useful for debugging and understanding state of robot
@@ -1041,7 +901,7 @@ void check_buttons()
   if (btnB.wasReleased())    // if the button was released, play a tone and do some functionality
   {
     play_tone(200, 150);
-    romiKinematics.setPoseTheta(romiKinematics.getPoseTheta() + 30);
+    romiKinematics.setPoseTheta(romiKinematics.poseTheta + 30);
   }
 }
 
@@ -1055,8 +915,8 @@ void check_buttons()
 bool doCheckForUnexploredTile() {
 
   //Get current grid position on map
-  int x_index = Map.poseToIndex(int(romiKinematics.getPoseX()), MAP_X, MAP_RESOLUTION);
-  int y_index = Map.poseToIndex(int(romiKinematics.getPoseY()), MAP_Y, MAP_RESOLUTION);
+  int x_index = Map.poseToIndex(int(romiKinematics.poseX), MAP_X, MAP_RESOLUTION);
+  int y_index = Map.poseToIndex(int(romiKinematics.poseY), MAP_Y, MAP_RESOLUTION);
 
   //Check if tile is explored?
   bool tileExplored = Map.isTileExplored(x_index, y_index);
@@ -1082,14 +942,14 @@ bool checkIfRomiIsOutsideMap() {
 
   bool romiOutsideOfMap;
 
-  //int x_index = Map.poseToIndex(int(romiKinematics.getPoseX()), MAP_X, MAP_RESOLUTION);
-  //int y_index = Map.poseToIndex(int(romiKinematics.getPoseY()), MAP_Y, MAP_RESOLUTION);
+  //int x_index = Map.poseToIndex(int(romiKinematics.poseX), MAP_X, MAP_RESOLUTION);
+  //int y_index = Map.poseToIndex(int(romiKinematics.poseY), MAP_Y, MAP_RESOLUTION);
 
   int upperLimitX = MAP_X - MAP_BORDER;
   int upperLimitY = MAP_Y - MAP_BORDER;
   int lowerLimit = 0 + MAP_BORDER;
 
-  if (romiKinematics.getPoseX() <= upperLimitX && romiKinematics.getPoseY() <= upperLimitY && romiKinematics.getPoseX() > lowerLimit && romiKinematics.getPoseY() > lowerLimit) {
+  if (romiKinematics.poseX <= upperLimitX && romiKinematics.poseY <= upperLimitY && romiKinematics.poseX > lowerLimit && romiKinematics.poseY > lowerLimit) {
     romiOutsideOfMap = false;
   }
   else {
@@ -1100,3 +960,30 @@ bool checkIfRomiIsOutsideMap() {
   return romiOutsideOfMap;
 }
 //----------------------------------
+
+/*-----------------------------------------------------------------------------
+   FUNCTION - BlUETOOTH SERIAL PRINT
+  ------------------------------------------------------------------------------*/
+
+  //-----Print Values over bluetooth------------
+
+void printToBluetoothDashboard()
+{
+  Serial1.print((millis()-start_time)/1000);
+  Serial1.print(",");
+  Serial1.print(romiKinematics.poseX);
+  Serial1.print(",");
+  Serial1.print(romiKinematics.poseY);
+  Serial1.print(",");
+  Serial1.print(romiKinematics.poseTheta);
+  Serial1.print(",");                     // two extra values have been added for RomiDashboard v1.2
+  Serial1.print(360-myFilter.complementary_filter_calc()); //complimentary filter
+  Serial1.print(",");
+  Serial1.print(romiKinematics.gloablPoseThetaPrediction); //kinematics change (delta theta) over the last second
+  Serial1.print(",");
+  Serial1.println(romiKinematics.kalmanFilterTurnOn); //kinematics change (delta theta) over the last second
+
+  romiKinematics.gloablPoseThetaPrediction = 0; // this line keeps track over the variable over the timestep until it is printed over bluetooth!
+}
+
+//---------------------------------

@@ -33,8 +33,8 @@ class PID
     void setGains(float P, float D, float I); // This function updates the values of the gains
     void reset(); //This function resets any stored values used by the integral or derative terms
     float update(float demand, float measurement); //This function calculates the PID control signal. It should be called in a loop
-    void print_components(); //This function prints the individual components of the control signal and can be used for debugging
-    void setMax(float  newMax); //This function sets the maximum output the controller can ask for
+//    void print_components(); //This function prints the individual components of the control signal and can be used for debugging
+    void setMax(int  newMax); //This function sets the maximum output the controller can ask for
     void setDebug(bool state); //This function sets the debug flag;
     //-------added by ben for threshold
     void setThresholdActive(bool state,int threshold); // This function sets a active threshold
@@ -61,7 +61,7 @@ class PID
     float Kd; //Derivative
 
     //We can use this to limit the output to a certain value
-    float max_output=255; 
+    int max_output=255; 
 
     //Output components
     //These are used for debugging purposes
@@ -100,17 +100,17 @@ class PID
  * You can call this yourself for debugging purposes, or set the debug flag to true to have it called
  * whenever the update function is called.
  */
-void PID::print_components()
-{
-  Serial.print("Proportional component: ");
-  Serial.print(Kp_output);
-  Serial.print(" Differential component: ");
-  Serial.print(Kd_output);
-  Serial.print(" Integral component: ");
-  Serial.print(Ki_output);
-  Serial.print(" Total: ");
-  Serial.println(total);
-}
+//void PID::print_components()
+//{
+//  Serial.print("Proportional component: ");
+//  Serial.print(Kp_output);
+//  Serial.print(" Differential component: ");
+//  Serial.print(Kd_output);
+//  Serial.print(" Integral component: ");
+//  Serial.print(Ki_output);
+//  Serial.print(" Total: ");
+//  Serial.println(total);
+//}
 
 /*
  * This function sets the gains of the PID controller
@@ -234,7 +234,7 @@ float PID::update(float demand, float measurement)
   return total;
 }
 
-void PID::setMax(float newMax)
+void PID::setMax(int newMax)
 {
   if (newMax > 0)
   {

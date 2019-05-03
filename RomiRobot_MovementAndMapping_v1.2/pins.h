@@ -8,11 +8,13 @@
 #define ENCODER_RIGHT_B_PIN  23
 #define ENCODER_LEFT_A_PIN  26
 
-#define LINE_LEFT_PIN A4 //Pin for the left line sensor
-#define LINE_CENTRE_PIN A3 //Pin for the centre line sensor
-#define LINE_RIGHT_PIN A2 //Pin for the right line sensor
+//#define LINE_LEFT_PIN A4 //Pin for the left line sensor
+//#define LINE_CENTRE_PIN A3 //Pin for the centre line sensor
+//#define LINE_RIGHT_PIN A2 //Pin for the right line sensor
 
 #define SHARP_IR_PIN A0 //Pin for the IR Distance sensor
+#define SHARP_IR2_PIN A1 //Pin for the IR Distance sensor
+#define SHARP_IR3_PIN A1 //Pin for the IR Distance sensor
 
 //#define YELLOW_LED 13
 //#define GREEN_LED 30
@@ -22,7 +24,7 @@
 //#define BUTTON_B 30
 //#define BUTTON_C 17
 
-#define BUZZER_PIN 6
+//#define BUZZER_PIN 6
 
 //#define SS_PIN 4
 //#define RST_PIN 5
