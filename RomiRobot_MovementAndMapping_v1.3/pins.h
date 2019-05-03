@@ -12,9 +12,8 @@
 //#define LINE_CENTRE_PIN A3 //Pin for the centre line sensor
 //#define LINE_RIGHT_PIN A2 //Pin for the right line sensor
 
-#define SHARP_IR_PIN A0 //Pin for the IR Distance sensor
-#define SHARP_IR2_PIN A1 //Pin for the IR Distance sensor
-#define SHARP_IR3_PIN A1 //Pin for the IR Distance sensor
+#define SHARP_IR_PIN A0 //Pin for the IR Distance sensor (centre or left)
+#define SHARP_IR_PIN_R A2 //Right
 
 //#define YELLOW_LED 13
 //#define GREEN_LED 30

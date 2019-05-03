@@ -269,7 +269,7 @@ float comp_filter:: complementary_filter_calc() // Nawid - Function to perform e
     float mag_heading = (atan2(calibrated_reading_y,calibrated_reading_x) -initial_mag_heading_value)*(57296 / 1000); // Nawid - Calculation of the heading angle - THIS IS BETWEEN PI AND - PI but by taking into account the offset and radian to degree conversion, it turns to degrees. 
     mag_heading = fmod((mag_heading) + 360, 360);
      
-    if (abs(filtered_mag_heading - mag_heading) > 350) // Nawid - This looks at the difference between the running average(filtered_reading) and the current reading to see if there is a change between 0 and 360
+    if (abs(filtered_mag_heading - mag_heading) > 300) // Nawid - This looks at the difference between the running average(filtered_reading) and the current reading to see if there is a change between 0 and 360
     {
        if (filtered_mag_heading > mag_heading)
        {

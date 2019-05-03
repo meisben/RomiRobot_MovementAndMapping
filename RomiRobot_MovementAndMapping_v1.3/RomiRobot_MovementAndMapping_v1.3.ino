@@ -28,6 +28,9 @@
    CW2_v2.40 - Changing the bluetooth code into a function to minimise space use
    CW2_v2.41 - Adding in printed values for the complimentary filter and delta kinematics, changed start mode to experiment, placed Romi at start point 0,0
    RomiRobot_MovementAndMapping_v1.2 [Checkpoint] Github commit with bluetooth writing complimentary filter and extended values to python dashboard
+   CW2_v2.42 - Adding in the extra (one) distance sensor .. because we only have 2 working versions
+   CW2_v2.43 --> SCRAP (the version where Nawid tried out his gyro fix)
+   RomiRobot_MovementAndMapping_v1.2 [Checkpoint] Github commit with 2 distance sensors and complimentary filter fix implemented
 */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -142,7 +145,7 @@ Button btnB(buttonPinB);
 
 //------Classes from CW2 baseline
 SharpIR       DistanceSensor(SHARP_IR_PIN); //Distance sensor
-
+SharpIR       DistanceSensorR(SHARP_IR_PIN_R); //Distance sensor Right
 Mapper        Map; //Class for representing the map
 
 
@@ -290,6 +293,7 @@ void loop()
 //
 //      doRandomWalk(true); //doRandomWalk until obstacle is detected
 //      DistanceSensor.obstacleDetected = false; //reset obstacle detected in the IR  library, note this is necessary to allow the ROMI to search for a new unexplored grid tile
+//      DistanceSensorR.obstacleDetected = false;
 //      stateCounter++; //keeps track of how many forward movements have been completed by the Romi
 //      stateRobot = 5; //move to search function
 //
@@ -309,6 +313,7 @@ void loop()
 //        myObstacleDetected = goToPoint(Map.targetXCoordinate, Map.targetYCoordinate); //move to that grid tile position
 //        delay(250);
 //        DistanceSensor.obstacleDetected = false; //reset obstacle detected in the IR mapping library, note this is necessary to allow the ROMI to search for a new unexplored grid tile
+//        DistanceSensorR.obstacleDetected = false;
 //        delay(250);
 //      }
 //      //Then turn towards the centre of the map (to maximise utility of random walk)
@@ -406,7 +411,7 @@ bool moveStraightLine(long distance, bool findObstacle)
         // Since 50ms elapsed, we update our timestamp so that another 50ms is needed to pass.
         time_of_read_lineStraightOrTurning = millis();
 
-        if (DistanceSensor.obstacleDetected == true)
+        if (DistanceSensor.obstacleDetected == true || DistanceSensorR.obstacleDetected == true)
         {
           rightMotor.setSpeed(0);
           leftMotor.setSpeed(0);
@@ -773,7 +778,12 @@ void doRandomWalk(bool findObstacle) {
     if ( millis() - obstacle_update > 100 && findObstacle == true) {
       obstacle_update = millis();
 
-      if (DistanceSensor.obstacleDetected == true || checkIfRomiIsOutsideMap() == true)
+//      Serial.print("obstacles C, R : ");
+//      Serial.print(DistanceSensor.obstacleDetected);
+//      Serial.print(",");
+//      Serial.print( DistanceSensorR.obstacleDetected);
+
+      if (DistanceSensor.obstacleDetected == true || checkIfRomiIsOutsideMap() == true || DistanceSensorR.obstacleDetected == true)
       {
         rightMotor.setSpeed(0);
         leftMotor.setSpeed(0);
@@ -845,6 +855,7 @@ void doMapping() {
     irSensor_update = millis();
 
     float filteredDistance = DistanceSensor.getFilteredDistanceInMM();
+    float filteredDistanceR = DistanceSensorR.getFilteredDistanceInMM();
 
     if ( filteredDistance < 450 && filteredDistance > 30 ) { //i.e. between approx 30mm and 400mm distance away
 
