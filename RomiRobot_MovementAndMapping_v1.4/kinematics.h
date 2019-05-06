@@ -55,7 +55,7 @@ class Kinematics
     float poseTheta = 0; //orientation in global frame (deg)
     float gloablPoseThetaPrediction = 0; // this line keeps track over the variable over the timestep until it is printed over bluetooth!
 
-    bool kalmanFilterTurnOn = true;
+    bool kalmanFilterTurnOn = false;
 
   private:
     //Private variables and methods go here
@@ -178,14 +178,14 @@ void Kinematics::resetEncoderCount()
 float Kinematics::kalmanPredictionUpdateOrientation(float myPoseThetaPrediction, Gaussian & myProcessModel, Gaussian & myMeasurement)
 {
   //use kinematics as the 'KF.ProcessModel'
-  myProcessModel.mean = myPoseThetaPrediction;
+  KF.processModel.mean = myPoseThetaPrediction;
   
   //take complimentary filter measurement
-  myMeasurement.mean = 360-myFilter.complementary_filter_calc(); //mapped into the 0-360 deg space with convention positive angle ccw
+  KF.measurementComplimentaryFilter.mean = 360-myFilter.complementary_filter_calc(); //mapped into the 0-360 deg space with convention positive angle ccw
 
   //kalman filter using one measurement from the complimentary filter
-  KF.kalman_predict(KF.xPosterior, myProcessModel, KF.xPrior); //i.e. return mean, variance to xPrior from combination of xPosterior and process model gaussians
-  KF.kalman_update(KF.xPrior, myMeasurement, KF.xPosterior); //i.e. return mean, variance to xPosterior from combination of xPrior and measurement gaussians
+  KF.kalman_predict(KF.xPosterior, KF.processModel, KF.xPrior); //i.e. return mean, variance to xPrior from combination of xPosterior and process model gaussians
+  KF.kalman_update(KF.xPrior, KF.measurementComplimentaryFilter, KF.xPosterior); //i.e. return mean, variance to xPosterior from combination of xPrior and measurement gaussians
 
   return KF.xPosterior.mean;
 }
@@ -194,6 +194,8 @@ float Kinematics::kalmanPredictionUpdateOrientation(float myPoseThetaPrediction,
 void Kinematics::kalmanFilterCalculate()
 {
   float poseThetaPrediction = poseTheta - lastPoseTheta; // calculate dx
+
+  poseThetaPrediction = KF.residualAngleMap(poseThetaPrediction); //maps the calculated dx into the 180 -> 180 deg space
 
   float kalmanPoseTheta = kalmanPredictionUpdateOrientation(poseThetaPrediction, KF.processModel, KF.measurementComplimentaryFilter); //call kalman filter
 

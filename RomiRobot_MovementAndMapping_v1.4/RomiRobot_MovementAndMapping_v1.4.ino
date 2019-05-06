@@ -30,7 +30,12 @@
    RomiRobot_MovementAndMapping_v1.2 [Checkpoint] Github commit with bluetooth writing complimentary filter and extended values to python dashboard
    CW2_v2.42 - Adding in the extra (one) distance sensor .. because we only have 2 working versions
    CW2_v2.43 --> SCRAP (the version where Nawid tried out his gyro fix)
-   RomiRobot_MovementAndMapping_v1.2 [Checkpoint] Github commit with 2 distance sensors and complimentary filter fix implemented
+   RomiRobot_MovementAndMapping_v1.3 [Checkpoint] Github commit with 2 distance sensors and complimentary filter fix implemented
+   Testing_v1.3t Travel around a square of size 280mm x 280mm ccw
+   Testing_v1.3t3a - Updates have been added to 'univariate_kalman' class to solve bugs with mapping of residual into -180 -> 180 deg space
+   Testing_v1.3t3b - Resolved bug with residual mapping in kalman class
+   Testing_v1.3t3c - Resolved bug with poseThetaPrediction
+   RomiRobot_MovementAndMapping_v1.4 [Checkpoint] Github commit with fix for wrapping of posethetaPrediction and kalman residual around 0-360 (residualAngleMap function)
 */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -201,7 +206,7 @@ void setup()
 //  myFilter.max_min_mag_data();
   myFilter.calibrate_mag(); // Nawid - calibrates the magnetometer reading
 //  myFilter.calibrate_mag_auto();
-  play_tone(60, 50);
+  play_tone(60, 500);
   delay(3000);
   myFilter.calibrate_gyro();  // Nawid - This is used to get the initial gyro readings
   myFilter.initial_filtered_reading(); // Nawid - This is used to get the reading for the first measurement
@@ -345,7 +350,7 @@ void loop()
       Serial.print("stateRobot test = ");
       Serial.println(stateRobot);
       
-      moveStraightLine(-5000, 0); //move forwards for 5000 encoder counts, with obstacle detection turned off
+      moveStraightLine(-1830, 0); //move forwards for 5000 encoder counts, with obstacle detection turned off
       stateRobot++;
       Serial.print("stateRobot = ");
       Serial.println(stateRobot);
@@ -360,8 +365,7 @@ void loop()
       break;
 
     case 6://-->> RANDOM WALK!
-      delay(250);
-      doRandomWalk(false); //doRandomWalk forever (because obstacle detection is off)    
+      stateRobot = 4;
       break;
 
     default:

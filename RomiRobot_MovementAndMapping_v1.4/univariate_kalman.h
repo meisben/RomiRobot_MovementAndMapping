@@ -8,15 +8,16 @@ class Kalman_Filter
   public:
 
     //--------Gaussians for kalman filter
-    Gaussian xPrior = Gaussian(); // centred around mean 0, with really large variance
-    Gaussian xPosterior = Gaussian();
+    Gaussian xPrior = Gaussian(0,10); // centred around mean 0, with really large variance
+    Gaussian xPosterior = Gaussian(0,10);
     //Gaussian xPosterior_2 = Gaussian(); //Posterior after 2nd measurement update (NOTE: this is not needed if only one measurement is present!)
     Gaussian processModel = Gaussian(0,10); //centred around mean 0, with variance 10
-    Gaussian measurementComplimentaryFilter = Gaussian(0,20);  //centred around mean 0, with variance 20
+    Gaussian measurementComplimentaryFilter = Gaussian(0,100);  //centred around mean 0, with variance 20
 
     //--------Function definitions for kalman filter
     void kalman_predict(Gaussian, Gaussian, Gaussian&);
     void kalman_update(Gaussian, Gaussian, Gaussian&);
+    float residualAngleMap(float);
 
   private:
     
@@ -68,6 +69,8 @@ void Kalman_Filter:: kalman_update(Gaussian prior, Gaussian measurement, Gaussia
   float y = z - my_x; //residual
   float K = P / (P + R); //Kalman gain
 
+  y = residualAngleMap(y);
+
   my_x = my_x + K * y; //posterior mean
   P = (1 - K) * P; //posterior variance
 
@@ -77,6 +80,32 @@ void Kalman_Filter:: kalman_update(Gaussian prior, Gaussian measurement, Gaussia
   xPosterior.mean = my_x;
   xPosterior.variance = P;
 }
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  This is where we define a function to map the residual value into into the range -180 to 180 deg *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+//~~~~~~~~~~~~~~~~Angle MAPPING FUNCTION~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+float Kalman_Filter:: residualAngleMap(float myResidual) //maps a residual (angle) between -180 -> 180 degs
+{
+  if (myResidual > 180)
+  {
+    myResidual = myResidual - 360;
+  }
+  else if (myResidual < -180)
+  {
+    myResidual = 360 + myResidual;
+  }
+  else
+  {
+    //pass
+  }
+  
+  return myResidual; 
+}
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #endif
