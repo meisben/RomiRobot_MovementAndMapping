@@ -201,18 +201,18 @@ void Mapper::returnClosestUnexploredCoOrdinates(float myPoseX, float myPoseY)
 
     //Some debugging print statements (can leave these commented out!)
 
-    Serial.println("");
-    Serial.println(" ------ returnClosestUnexploredCoOrdinates ----- ");
-    Serial.print("new_x_index = ");
-    Serial.print(new_x_index);
-    Serial.print(" | new_y_index = ");
-    Serial.println(new_y_index);
-    Serial.print("targetXCoordinate = ");
-    Serial.print(targetXCoordinate);
-    Serial.print(" | targetYCoordinate = ");
-    Serial.println(targetYCoordinate);
-    Serial.println(" ------ ------  ------ ----- ");
-    Serial.println("");
+//    Serial.println("");
+//    Serial.println(" ------ returnClosestUnexploredCoOrdinates ----- ");
+//    Serial.print("new_x_index = ");
+//    Serial.print(new_x_index);
+//    Serial.print(" | new_y_index = ");
+//    Serial.println(new_y_index);
+//    Serial.print("targetXCoordinate = ");
+//    Serial.print(targetXCoordinate);
+//    Serial.print(" | targetYCoordinate = ");
+//    Serial.println(targetYCoordinate);
+//    Serial.println(" ------ ------  ------ ----- ");
+//    Serial.println("");
 
 }
 

@@ -10,10 +10,7 @@ class SharpIR
         SharpIR(byte pin);
 
         bool obstacleDetected = false; //flag which is set to true if obstacle is detected
-        
-        int  getDistanceRaw();
-        
-        float  getDistanceInMM();
+
         float  getFilteredDistanceInMM(); //use this one for CW2 !
         
         //void calibrate(); //not used
@@ -32,42 +29,18 @@ SharpIR::SharpIR(byte _pin)
   pin = _pin;
 }
 
-int SharpIR::getDistanceRaw()
-{
-    return analogRead(pin);
-}
-
-
-/*
- * This piece of code is quite crucial to mapping
- * obstacle distance accurately, so you are encouraged
- * to calibrate your own sensor by following the labsheet.
- * Also remember to make sure your sensor is fixed to your
- * Romi firmly and has a clear line of sight!
- */
-float SharpIR::getDistanceInMM()
-{
-    
-    float distance = (float)analogRead( pin );
-    
-    // map this to 0 : 5v range.
-    distance *= 0.0048;
-
-    const float exponent = (1/-0.676);
-    distance = pow( ( distance / 67.41 ), exponent);
-
-    checkForObstacle(distance);
-       
-    return distance;
-}
 
 float SharpIR::getFilteredDistanceInMM()
 {
     
-    float distance = (float)analogRead( pin );
+    float distance = analogRead( pin );
     
     // map this to 0 : 5v range.
     distance *= 0.0048;
+
+    if (distance<0.1){
+      distance = 0.1;
+    }
 
     const float exponent = (1/-0.676);
     distance = pow( ( distance / 67.41 ), exponent);

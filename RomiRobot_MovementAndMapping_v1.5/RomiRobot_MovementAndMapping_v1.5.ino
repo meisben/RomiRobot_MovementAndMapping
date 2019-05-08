@@ -36,6 +36,8 @@
    Testing_v1.3t3b - Resolved bug with residual mapping in kalman class
    Testing_v1.3t3c - Resolved bug with poseThetaPrediction
    RomiRobot_MovementAndMapping_v1.4 [Checkpoint] Github commit with fix for wrapping of posethetaPrediction and kalman residual around 0-360 (residualAngleMap function)
+   Intermediate_v1.4i1 - Adding additional distance sensor, checking this and line sensor is working correctly
+   RomiRobot_MovementAndMapping_v1.5 [Checkpoint] Github commit with fixed obstacle avoidance for movement and mapping -> we will use this for the coursework
 */
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -77,7 +79,7 @@
 
 //--------Definitions for line following-------------
 
-#define LINE_CENTRE_PIN A3 //Pin for the centre line sensor
+#define LINE_CENTRE_PIN A4 //Pin for the centre line sensor
 
 // -------Definitions for buttons and buzzer
 const char buzzerPin = 6; //buzzer
@@ -151,6 +153,7 @@ Button btnB(buttonPinB);
 //------Classes from CW2 baseline
 SharpIR       DistanceSensor(SHARP_IR_PIN); //Distance sensor
 SharpIR       DistanceSensorR(SHARP_IR_PIN_R); //Distance sensor Right
+SharpIR       DistanceSensorL(SHARP_IR_PIN_L); //Distance sensor Right
 Mapper        Map; //Class for representing the map
 
 
@@ -239,8 +242,8 @@ void loop()
   {
     play_tone(150, 100);
     stateRobot++;
-    Serial.print("stateRobot = ");
-    Serial.println(stateRobot);
+    //Serial.print("stateRobot = ");
+    //Serial.println(stateRobot);
   }
   if (btnB.wasReleased())    // if the button was released, print the map
   {
@@ -284,14 +287,14 @@ void loop()
       stateRobot++;
       play_tone(150, 50);
 
-      Serial.print("stateRobot = "); //for debugging
-      Serial.println(stateRobot);
+      //Serial.print("stateRobot = "); //for debugging
+      //Serial.println(stateRobot);
 
       delay(250);
       break;
 
-    //---------------Can make changes from here  - RANDOM walk and Exploration behaviour [Uncomment to use] ---------------------------------
-
+//    //---------------Can make changes from here  - RANDOM walk and Exploration behaviour [Uncomment to use] ---------------------------------
+//
 //    case 4://-->> RANDOM WALK!
 //
 //      Serial.print("Romi doing random walk"); //for debugging
@@ -299,6 +302,7 @@ void loop()
 //      doRandomWalk(true); //doRandomWalk until obstacle is detected
 //      DistanceSensor.obstacleDetected = false; //reset obstacle detected in the IR  library, note this is necessary to allow the ROMI to search for a new unexplored grid tile
 //      DistanceSensorR.obstacleDetected = false;
+//      DistanceSensorL.obstacleDetected = false;
 //      stateCounter++; //keeps track of how many forward movements have been completed by the Romi
 //      stateRobot = 5; //move to search function
 //
@@ -319,6 +323,7 @@ void loop()
 //        delay(250);
 //        DistanceSensor.obstacleDetected = false; //reset obstacle detected in the IR mapping library, note this is necessary to allow the ROMI to search for a new unexplored grid tile
 //        DistanceSensorR.obstacleDetected = false;
+//        DistanceSensorL.obstacleDetected = false;
 //        delay(250);
 //      }
 //      //Then turn towards the centre of the map (to maximise utility of random walk)
@@ -364,7 +369,7 @@ void loop()
       Serial.println(stateRobot);
       break;
 
-    case 6://-->> RANDOM WALK!
+    case 6://-->> MAKE A SQUARE!
       stateRobot = 4;
       break;
 
@@ -415,7 +420,7 @@ bool moveStraightLine(long distance, bool findObstacle)
         // Since 50ms elapsed, we update our timestamp so that another 50ms is needed to pass.
         time_of_read_lineStraightOrTurning = millis();
 
-        if (DistanceSensor.obstacleDetected == true || DistanceSensorR.obstacleDetected == true)
+        if (DistanceSensor.obstacleDetected == true || DistanceSensorR.obstacleDetected == true || DistanceSensorL.obstacleDetected == true)
         {
           rightMotor.setSpeed(0);
           leftMotor.setSpeed(0);
@@ -787,7 +792,7 @@ void doRandomWalk(bool findObstacle) {
 //      Serial.print(",");
 //      Serial.print( DistanceSensorR.obstacleDetected);
 
-      if (DistanceSensor.obstacleDetected == true || checkIfRomiIsOutsideMap() == true || DistanceSensorR.obstacleDetected == true)
+      if (DistanceSensor.obstacleDetected == true || checkIfRomiIsOutsideMap() == true || DistanceSensorR.obstacleDetected == true || DistanceSensorL.obstacleDetected == true)
       {
         rightMotor.setSpeed(0);
         leftMotor.setSpeed(0);
@@ -859,9 +864,10 @@ void doMapping() {
     irSensor_update = millis();
 
     float filteredDistance = DistanceSensor.getFilteredDistanceInMM();
-    float filteredDistanceR = DistanceSensorR.getFilteredDistanceInMM();
+    float filteredDistanceR = DistanceSensorR.getFilteredDistanceInMM(); //used for obstacle avoidance only!
+    float filteredDistanceL = DistanceSensorL.getFilteredDistanceInMM();  //used for obstacle avoidance only!
 
-    if ( filteredDistance < 450 && filteredDistance > 30 ) { //i.e. between approx 30mm and 400mm distance away
+    if ( filteredDistance < 100 && filteredDistance > 30 ) { //i.e. between approx 30mm and 100mm distance away
 
       // add distance to  centre of the robot.
       filteredDistance += 95;
@@ -873,9 +879,7 @@ void doMapping() {
 
     }
 
-
-
-    if ( lineCentre.read_filtered() > 50 ) {
+    if ( lineCentre.read_filtered() > -100 ) {
       Map.updateMapFeature( (byte)'L', romiKinematics.poseY, romiKinematics.poseX );
     }
   }

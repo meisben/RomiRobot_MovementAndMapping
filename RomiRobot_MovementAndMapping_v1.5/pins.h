@@ -14,6 +14,7 @@
 
 #define SHARP_IR_PIN A0 //Pin for the IR Distance sensor (centre or left)
 #define SHARP_IR_PIN_R A2 //Right
+#define SHARP_IR_PIN_L A3 //Left
 
 //#define YELLOW_LED 13
 //#define GREEN_LED 30

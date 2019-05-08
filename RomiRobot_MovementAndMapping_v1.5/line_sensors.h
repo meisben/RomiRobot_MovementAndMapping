@@ -69,8 +69,8 @@ void Line_Sensor::calibrate() //This code calibrates each line sensor
 
     calibratedBaseline = calibrationRunningTotal / (i-1); //note we de-crement i by one because it was incremented by an extra one in the loop wtf
 
-//    Serial.print("calibrated line sensor Baseline ");
-//    Serial.println(calibratedBaseline);
+    Serial.print("calibrated line sensor Baseline ");
+    Serial.println(calibratedBaseline);
 }
 
 int Line_Sensor::read_calibrated() //This code returns a calibrated reading
